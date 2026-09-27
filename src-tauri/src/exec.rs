@@ -16,6 +16,16 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager, State};
 
+/// On Windows, one-shot child processes must not flash a console window.
+#[cfg(windows)]
+fn no_console_window(cmd: &mut Command) {
+    use std::os::windows::process::CommandExt;
+    cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+}
+
+#[cfg(not(windows))]
+fn no_console_window(_cmd: &mut Command) {}
+
 pub struct ExecChild {
     child: Arc<Mutex<Child>>,
 }
@@ -54,6 +64,7 @@ pub fn exec_start(
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
+    no_console_window(&mut cmd);
     if !cwd.trim().is_empty() {
         cmd.current_dir(&cwd);
     }

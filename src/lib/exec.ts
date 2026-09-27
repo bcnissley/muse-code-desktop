@@ -142,3 +142,25 @@ const NOISE_RE = /^(muse\s*:|opening meta model|completed meta model|.*\bmodel s
 export function isExecNoise(line: string): boolean {
   return NOISE_RE.test(line.trim());
 }
+
+/**
+ * Fold one extracted chunk into the accumulated answer text.
+ *
+ * `muse exec --json` delivers the answer through streaming events and then
+ * repeats the entire answer in a final summary event — appending both prints
+ * everything twice. The repeat doesn't always carry a recognizable event
+ * label, so dedupe by content instead of trusting the schema:
+ *  - a `result` event carries the authoritative full answer → replace
+ *  - an exact repeat of the tail → skip (min length so a legit short echo
+ *    like "ha ha" still appends)
+ *  - a chunk that restates everything so far plus more → take the fuller text
+ */
+const REPEAT_MIN_LEN = 24;
+
+export function appendExecChunk(acc: string, chunk: string, event?: string): string {
+  if (!chunk) return acc;
+  if (event === "result") return chunk;
+  if (chunk.length >= REPEAT_MIN_LEN && acc.endsWith(chunk)) return acc;
+  if (acc.length > 0 && chunk.length > acc.length && chunk.startsWith(acc)) return chunk;
+  return acc + chunk;
+}

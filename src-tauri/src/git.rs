@@ -11,6 +11,16 @@ use std::io::Write;
 use std::path::Path;
 use std::process::{Command, Stdio};
 
+/// On Windows, one-shot child processes must not flash a console window.
+#[cfg(windows)]
+fn no_console_window(cmd: &mut Command) {
+    use std::os::windows::process::CommandExt;
+    cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+}
+
+#[cfg(not(windows))]
+fn no_console_window(_cmd: &mut Command) {}
+
 /// Run a program with piped stdout/stderr, optional cwd and optional stdin
 /// bytes. Returns trimmed stdout on success, or the first stderr line.
 fn run(
@@ -31,6 +41,7 @@ fn run(
     } else {
         cmd.stdin(Stdio::null());
     }
+    no_console_window(&mut cmd);
     let mut child = cmd
         .spawn()
         .map_err(|e| format!("could not run '{prog}': {e}"))?;

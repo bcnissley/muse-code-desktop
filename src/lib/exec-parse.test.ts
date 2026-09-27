@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extractExecText, isExecNoise } from "./exec";
+import { appendExecChunk, extractExecText, isExecNoise } from "./exec";
 
 describe("extractExecText", () => {
   it("passes plain-text lines through", () => {
@@ -78,5 +78,43 @@ describe("extractExecText", () => {
   it("does not flag real answer text as noise", () => {
     expect(isExecNoise("Hello! How can I help?")).toBe(false);
     expect(isExecNoise('{"type":"message","text":"hi"}')).toBe(false);
+  });
+});
+
+describe("appendExecChunk", () => {
+  it("appends streamed assistant chunks", () => {
+    expect(appendExecChunk("", "Hello, ", "assistant")).toBe("Hello, ");
+    expect(appendExecChunk("Hello, ", "world", "stream_event")).toBe("Hello, world");
+  });
+
+  it("replaces accumulated text with the final result event (no duplication)", () => {
+    const streamed = "Hello. What do you want to build or fix?";
+    const fromResult = appendExecChunk(streamed, streamed, "result");
+    expect(fromResult).toBe(streamed);
+    expect(fromResult).not.toBe(streamed + streamed);
+  });
+
+  it("skips an exact repeat of the tail even without a result label", () => {
+    const msg = "I'm Muse Code powered by Meta Muse Spark. How can I help?";
+    expect(appendExecChunk(msg, msg, "assistant")).toBe(msg);
+    expect(appendExecChunk(msg, msg)).toBe(msg);
+  });
+
+  it("still appends short legitimately-repeated phrases", () => {
+    expect(appendExecChunk("ha ", "ha ", "assistant")).toBe("ha ha ");
+  });
+
+  it("takes the fuller text when a chunk restates everything so far", () => {
+    const partial = "Hello. What do you want";
+    const full = "Hello. What do you want to build or fix?";
+    expect(appendExecChunk(partial, full, "assistant")).toBe(full);
+  });
+
+  it("fills in the answer when only the summary event carried text", () => {
+    expect(appendExecChunk("", "Full answer", "summary")).toBe("Full answer");
+  });
+
+  it("ignores empty chunks", () => {
+    expect(appendExecChunk("abc", "", "assistant")).toBe("abc");
   });
 });

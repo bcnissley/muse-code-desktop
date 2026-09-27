@@ -10,6 +10,7 @@ mod git;
 mod panel;
 mod projects;
 mod pty;
+mod win_console;
 #[cfg(test)]
 mod tests;
 
@@ -18,6 +19,10 @@ use std::sync::Mutex;
 use tauri::Manager;
 
 fn main() {
+    // Must run before any child process is spawned: gives the process a
+    // hidden console so `cmd`/node/git grandchildren never pop a window.
+    win_console::ensure_hidden_console();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(pty::PtyState(Mutex::new(HashMap::new())))

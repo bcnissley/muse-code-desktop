@@ -3,7 +3,7 @@ import Composer from "./Composer";
 import TerminalPane from "./TerminalPane";
 import { LOGO_URL, MUSE_MODEL } from "../constants";
 import { PtyClient, defaultShell } from "../lib/pty";
-import { ExecClient, extractExecText, isExecNoise } from "../lib/exec";
+import { ExecClient, appendExecChunk, extractExecText, isExecNoise } from "../lib/exec";
 
 export interface CliConfig {
   command: string; // e.g. "muse"
@@ -219,7 +219,7 @@ export default function Workspace({
           }
           if (event) pushTelemetry(event);
           if (chunk) {
-            execTextRef.current += chunk;
+            execTextRef.current = appendExecChunk(execTextRef.current, chunk, event);
             setAssistantText(execTextRef.current);
           }
         } else {
