@@ -1,0 +1,1 @@
+{"default":{"identifier":"default","description":"Default permissions for Muse Code Desktop","local":true,"windows":["main","browser-*"],"permissions":["core:default","dialog:default"]}}

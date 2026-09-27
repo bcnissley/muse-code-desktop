@@ -1,0 +1,23 @@
+[package]
+name = "muse-code-desktop"
+version = "0.1.0"
+description = "Desktop app for Muse Code — chat-first coding workspace with side-by-side Muse panel"
+authors = ["Brian Nissley"]
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# NOTE: the `unstable` feature is required for multi-webview support
+# (Window::add_child) which powers the side-by-side Muse panel.
+tauri = { version = "2", features = ["unstable"] }
+tauri-plugin-dialog = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+portable-pty = "0.8"
+url = "2"
+
+[features]
+default = [ "custom-protocol" ]
+custom-protocol = [ "tauri/custom-protocol" ]
