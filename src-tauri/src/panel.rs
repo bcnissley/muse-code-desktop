@@ -8,7 +8,9 @@
 //! app's internal browser windows ("browser-N"), never in the system browser.
 //! This is enforced two ways:
 //!   1. `link-interceptor.js` (document_start) reroutes link clicks, and
-//!   2. `on_new_window` denies native popups and opens the in-app browser.
+//!   2. `on_new_window` ALLOWS popups as real in-app windows. OAuth flows
+//!      call window.open() and need a live opener handle back — denying the
+//!      popup made pages report "popups blocked" (issue #2).
 
 use std::sync::{
     atomic::{AtomicU32, Ordering},
@@ -19,9 +21,6 @@ use tauri::webview::{NewWindowResponse, PermissionKind, PermissionResponse, Webv
 use tauri::window::WindowBuilder;
 
 pub const LINK_INTERCEPTOR: &str = include_str!("link-interceptor.js");
-/// Prepended to the interceptor inside in-app browser windows so
-/// window.open is routed in-app there too.
-const BROWSER_FLAG: &str = "window.__MCD_IN_APP_BROWSER__=true;";
 
 #[derive(Clone)]
 pub struct PanelConfig {
@@ -98,17 +97,15 @@ pub fn build_multiwebview(app: &mut tauri::App) -> Result<(), String> {
         .build()
         .map_err(|e| format!("main window build failed: {e}"))?;
 
-    let app_h = app.handle().clone();
     let app_view = WebviewBuilder::new("app-view", WebviewUrl::App("index.html".into()))
         .initialization_script(LINK_INTERCEPTOR)
         .on_permission_request(|_, kind| mic_permission(kind))
-        .on_new_window(move |url, _| {
-            let app_c = app_h.clone();
-            let url_s = url.to_string();
-            std::thread::spawn(move || {
-                let _ = open_browser_window(&app_c, &url_s);
-            });
-            NewWindowResponse::Deny
+        .on_new_window(|_, _| {
+            // Popups (window.open) are allowed as REAL in-app windows.
+            // OAuth flows need a live opener handle; denying the popup
+            // made the page see `null` and report popups as blocked.
+            // Still never the OS browser (issue #2).
+            NewWindowResponse::Allow
         });
 
     // `add_child` requires tauri's `unstable` cargo feature (see Cargo.toml).
@@ -151,17 +148,15 @@ pub fn ensure_muse_view(app: &AppHandle) -> Result<(), String> {
     let (win_w, win_h) = window_dims(app).unwrap_or((1440.0, 900.0));
     let x = (win_w * split).round();
 
-    let app_h = app.clone();
     let builder = WebviewBuilder::new("muse-view", WebviewUrl::External(parsed))
         .initialization_script(LINK_INTERCEPTOR)
         .on_permission_request(|_, kind| mic_permission(kind))
-        .on_new_window(move |url, _| {
-            let app_c = app_h.clone();
-            let url_s = url.to_string();
-            std::thread::spawn(move || {
-                let _ = open_browser_window(&app_c, &url_s);
-            });
-            NewWindowResponse::Deny
+        .on_new_window(|_, _| {
+            // Popups (window.open) are allowed as REAL in-app windows.
+            // OAuth flows need a live opener handle; denying the popup
+            // made the page see `null` and report popups as blocked.
+            // Still never the OS browser (issue #2).
+            NewWindowResponse::Allow
         });
 
     match w.add_child(
@@ -252,21 +247,18 @@ fn open_browser_window(app: &AppHandle, url: &str) -> Result<(), String> {
     let n = BROWSER_SEQ.fetch_add(1, Ordering::SeqCst);
     let label = format!("browser-{n}");
     let parsed = url::Url::parse(url).map_err(|e| format!("bad url: {e}"))?;
-    let init = format!("{BROWSER_FLAG}{LINK_INTERCEPTOR}");
-    let app_c = app.clone();
     tauri::WebviewWindowBuilder::new(app, &label, WebviewUrl::External(parsed))
-        .initialization_script(&init)
+        .initialization_script(LINK_INTERCEPTOR)
         .title("Browser")
         .inner_size(1000.0, 720.0)
         .min_inner_size(640.0, 480.0)
         .center()
-        .on_new_window(move |url, _| {
-            let app_c2 = app_c.clone();
-            let url_s = url.to_string();
-            std::thread::spawn(move || {
-                let _ = open_browser_window(&app_c2, &url_s);
-            });
-            NewWindowResponse::Deny
+        .on_new_window(|_, _| {
+            // Popups (window.open) are allowed as REAL in-app windows.
+            // OAuth flows need a live opener handle; denying the popup
+            // made the page see `null` and report popups as blocked.
+            // Still never the OS browser (issue #2).
+            NewWindowResponse::Allow
         })
         .build()
         .map(|_| ())

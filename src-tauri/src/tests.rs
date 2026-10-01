@@ -91,14 +91,31 @@ mod link_interceptor {
     }
 
     #[test]
-    fn in_app_browser_windows_route_window_open_internally() {
+    fn popups_are_real_in_app_windows_not_denied() {
+        // Issue #2: OAuth flows call window.open() and poll the returned
+        // handle. Neutering it to return null made pages report "popups
+        // blocked", so the interceptor must leave window.open alone and
+        // let the Rust on_new_window handler allow real in-app popups.
         assert!(
-            SRC.contains("__MCD_IN_APP_BROWSER__"),
-            "browser windows must be flagged by the Rust side"
+            !SRC.contains("window.open = function"),
+            "must not override window.open; the page needs a live handle"
+        );
+    }
+
+    #[test]
+    fn single_link_copy_puts_url_on_clipboard() {
+        // Issue #1: copying a rendered markdown link must yield the URL.
+        assert!(
+            SRC.contains("__mcdCopyHref"),
+            "copy decision helper must be exposed for unit tests"
         );
         assert!(
-            SRC.contains("window.open = function"),
-            "window.open must be overridden in browser windows"
+            SRC.contains(r#"document.addEventListener("copy""#),
+            "must listen for copy events"
+        );
+        assert!(
+            SRC.contains(r#"setData("text/plain", href)"#),
+            "must put the resolved href on the clipboard"
         );
     }
 

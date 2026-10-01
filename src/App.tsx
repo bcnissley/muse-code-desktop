@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import Workspace, { type CliConfig } from "./components/Workspace";
 import SettingsModal from "./components/SettingsModal";
+import PromptPocketModal from "./components/PromptPocketModal";
 import Splash from "./components/Splash";
 import GitHubSection from "./components/GitHubSection";
 import { gitInfo, type GitInfo } from "./lib/git";
@@ -49,6 +50,7 @@ export default function App() {
   const [config, setConfig] = useState<CliConfig>(loadConfig);
   const [panel, setPanel] = useState<MusePanelStatus | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [pocketOpen, setPocketOpen] = useState(false);
   const [spaces, setSpaces] = useState<ProjectSpace[]>(() =>
     loadSpaces(DEFAULT_PROJECTS)
   );
@@ -443,6 +445,13 @@ export default function App() {
           </button>
           <button
             className="side-btn"
+            onClick={() => setPocketOpen(true)}
+            title="Open your local prompt library"
+          >
+            ✎ Prompt Pocket
+          </button>
+          <button
+            className="side-btn"
             onClick={() =>
               openInAppBrowser("https://muse.ai").catch(() => {})
             }
@@ -512,6 +521,8 @@ export default function App() {
           )}
         </div>
       </div>
+
+      {pocketOpen && <PromptPocketModal onClose={() => setPocketOpen(false)} />}
 
       {settingsOpen && (
         <SettingsModal
