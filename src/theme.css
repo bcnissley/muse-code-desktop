@@ -236,6 +236,7 @@ input, textarea { user-select: text; }
 
 /* ---------- composer ---------- */
 .composer { padding: 12px 16px 14px; background: var(--bg2); border-top: 1px solid var(--bg4); }
+
 .composer-row { display: flex; align-items: flex-end; gap: 8px; }
 .composer textarea {
   flex: 1; background: var(--bg3); border: 1px solid var(--slate); color: var(--text);

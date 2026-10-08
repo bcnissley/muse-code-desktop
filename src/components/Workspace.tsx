@@ -277,6 +277,7 @@ export default function Workspace({
     };
   }, []);
 
+
   return (
     <div className="chat-pane">
       <div className="tabs">

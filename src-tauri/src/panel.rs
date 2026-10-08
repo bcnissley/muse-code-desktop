@@ -157,7 +157,8 @@ pub fn ensure_muse_view(app: &AppHandle) -> Result<(), String> {
             // made the page see `null` and report popups as blocked.
             // Still never the OS browser (issue #2).
             NewWindowResponse::Allow
-        });
+        })
+        .disable_drag_drop_handler();
 
     match w.add_child(
         builder,
